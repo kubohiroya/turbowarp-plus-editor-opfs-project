@@ -5,6 +5,8 @@ import { acquireProjectLock, LOCK_FILE } from './project-lock.ts';
 import { assertProjectId, commitChanges, GITIGNORE_FILE, openProjectDirectory } from './project-repository.ts';
 import type { Author } from './project-repository.ts';
 import { isDirectoryHandle, isFileHandle } from './opfs-types.ts';
+import { createHistoryBundle, HISTORY_BUNDLE_PATH } from './project-history.ts';
+import type { HistoryBundleRef } from './project-history.ts';
 import type { DirectoryHandle } from './opfs-types.ts';
 
 // 作業ツリーのうち、SB3 の入れ替えで消さないもの。
@@ -87,4 +89,55 @@ export async function exportSb3Archive<T>(root: DirectoryHandle, { projectId, bu
   const dir = await openProjectDirectory(root, projectId);
   const files = await readWorkingTree(dir);
   return buildArchive(files);
+}
+
+export interface ExportSb3WithHistoryOptions<T> {
+  projectId: string;
+  buildArchive: BuildArchive<T>;
+  author: Author;
+  owner: string;
+  // true なら、未コミットの変更を先にコミットしてから書き出す（作業ツリーは変わる）。
+  includeUncommitted: boolean;
+  now?: number | undefined;
+  staleMs?: number | undefined;
+}
+
+export interface ExportSb3WithHistoryResult<T> {
+  archive: T;
+  commit: string | null;
+  bundleRefs: HistoryBundleRef[];
+  commitCount: number;
+  bundleBytes: number;
+}
+
+// 履歴付きの書き出し。作品の内容に加えて tw-plus/history.bundle を入れる。
+// includeUncommitted のときは、ロックを取ってから未コミットの変更を記録する。
+export async function exportSb3WithHistory<T>(
+  root: DirectoryHandle,
+  { projectId, buildArchive, author, owner, includeUncommitted, now, staleMs }: ExportSb3WithHistoryOptions<T>,
+): Promise<ExportSb3WithHistoryResult<T>> {
+  assertProjectId(projectId);
+  if (typeof buildArchive !== 'function') throw new Error('buildArchive is required');
+  const dir = await openProjectDirectory(root, projectId);
+  const fs = createGitFs(dir);
+  let commit: string | null = null;
+  if (includeUncommitted) {
+    const lock = await acquireProjectLock(dir, { owner, now, staleMs });
+    try {
+      commit = await commitChanges(fs, '/', 'Save before export', author);
+    } finally {
+      await lock.release();
+    }
+  }
+  const bundle = await createHistoryBundle(fs, '/');
+  const files = await readWorkingTree(dir);
+  files.set(HISTORY_BUNDLE_PATH, bundle.bytes);
+  const archive = await buildArchive(files);
+  return {
+    archive,
+    commit,
+    bundleRefs: bundle.refs,
+    commitCount: bundle.commitCount,
+    bundleBytes: bundle.bytes.length,
+  };
 }
