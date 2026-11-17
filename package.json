@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-plus-editor-opfs-project",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "OPFS-backed project folders for TurboWarp-Plus-Editor: one project, one Git repository.",
   "type": "module",
   "license": "MPL-2.0",
@@ -9,10 +9,13 @@
     "url": "git+https://github.com/kubohiroya/turbowarp-plus-editor-opfs-project.git"
   },
   "files": [
-    "src"
+    "src",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
-    "test": "node --test test/project-repository.test.js test/project-lock.test.js test/project-sb3.test.js"
+    "test": "node --test test/project-repository.test.js test/project-lock.test.js test/project-sb3.test.js",
+    "prepublishOnly": "npm test"
   },
   "dependencies": {
     "@kubohiroya/sb3-toolchain": "^0.28.0",
@@ -20,5 +23,9 @@
   },
   "devDependencies": {
     "fflate": "^0.8.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
