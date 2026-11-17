@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FakeDirectory } from './fake-opfs.js';
-import { acquireProjectLock, inspectProjectLock, LOCK_FILE, ProjectLockedError } from '../src/project-lock.js';
+import { FakeDirectory } from './fake-opfs.ts';
+import { acquireProjectLock, inspectProjectLock, LOCK_FILE, ProjectLockedError } from '../src/project-lock.ts';
 
 test('a second owner is refused while the first heartbeat is fresh', async () => {
   const dir = new FakeDirectory();

@@ -8,21 +8,51 @@
     "type": "git",
     "url": "git+https://github.com/kubohiroya/turbowarp-plus-editor-opfs-project.git"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./opfs-git-fs": {
+      "types": "./dist/opfs-git-fs.d.ts",
+      "import": "./dist/opfs-git-fs.js"
+    },
+    "./project-lock": {
+      "types": "./dist/project-lock.d.ts",
+      "import": "./dist/project-lock.js"
+    },
+    "./project-repository": {
+      "types": "./dist/project-repository.d.ts",
+      "import": "./dist/project-repository.js"
+    },
+    "./project-sb3": {
+      "types": "./dist/project-sb3.d.ts",
+      "import": "./dist/project-sb3.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
   "files": [
+    "dist",
     "src",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
-    "test": "node --test test/project-repository.test.js test/project-lock.test.js test/project-sb3.test.js",
-    "prepublishOnly": "npm test"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@kubohiroya/sb3-toolchain": "^0.28.0",
     "isomorphic-git": "^1.44.15"
   },
   "devDependencies": {
-    "fflate": "^0.8.3"
+    "@types/node": "^26.6.6",
+    "fflate": "^0.8.3",
+    "typescript": "^7.0.2"
   },
   "publishConfig": {
     "access": "public",

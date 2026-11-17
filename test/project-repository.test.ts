@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import git from 'isomorphic-git';
-import { FakeDirectory } from './fake-opfs.js';
-import { createProjectRepository, openProjectDirectory, PROJECT_FILE } from '../src/project-repository.js';
-import { createGitFs } from '../src/opfs-git-fs.js';
+import { FakeDirectory } from './fake-opfs.ts';
+import { createProjectRepository, openProjectDirectory, PROJECT_FILE } from '../src/project-repository.ts';
+import { createGitFs } from '../src/opfs-git-fs.ts';
 
 const author = { name: 'Hiroya Kubo', email: 'hiroya@cuc.ac.jp' };
 
@@ -15,8 +15,8 @@ test('creates a project repository in OPFS with one initial commit on main', asy
   assert.equal(await git.currentBranch({ fs, dir: '/' }), 'main');
   const log = await git.log({ fs, dir: '/' });
   assert.equal(log.length, 1);
-  assert.equal(log[0].oid, commit);
-  assert.equal(log[0].commit.author.name, 'Hiroya Kubo');
+  assert.equal(log[0]?.oid, commit);
+  assert.equal(log[0]?.commit.author.name, 'Hiroya Kubo');
   const files = await git.listFiles({ fs, dir: '/' });
   assert.deepEqual(files.sort(), ['.gitignore', PROJECT_FILE]);
   const json = JSON.parse(await fs.promises.readFile(`/${PROJECT_FILE}`, 'utf8'));
@@ -26,7 +26,7 @@ test('creates a project repository in OPFS with one initial commit on main', asy
 test('refuses to overwrite an existing project repository', async () => {
   const root = new FakeDirectory();
   await createProjectRepository(root, { projectId: 'p2', title: 'a', author });
-  await assert.rejects(createProjectRepository(root, { projectId: 'p2', title: 'b', author }), (e) => e.code === 'EEXIST');
+  await assert.rejects(createProjectRepository(root, { projectId: 'p2', title: 'b', author }), (e) => (e as { code?: string }).code === 'EEXIST');
 });
 
 test('rejects project ids that are not plain path segments', async () => {
