@@ -6,7 +6,10 @@ import { LOCK_FILE } from './project-lock.ts';
 import { codedError, writeBytes } from './opfs-types.ts';
 import type { DirectoryHandle } from './opfs-types.ts';
 
-export const PROJECTS_DIRECTORY = 'turbowarp-plus-projects';
+// ブラウザー内の作品フォルダは、@kubohiroya/turbowarp-plus-editor-project-folder の browser-projects と同じ場所に置く。
+// OPFS の <root>/turbowarp-plus/projects/<id>/。同じ作品を二つの場所に持たないため。
+export const BASE_DIRECTORY = 'turbowarp-plus';
+export const PROJECTS_DIRECTORY = 'projects';
 export const PROJECT_FILE = 'project.json';
 export const GITIGNORE_FILE = '.gitignore';
 
@@ -44,12 +47,12 @@ export async function openProjectDirectory(
   projectId: string,
   { create = false }: { create?: boolean } = {},
 ): Promise<DirectoryHandle> {
-  const base = await root.getDirectoryHandle(PROJECTS_DIRECTORY, { create });
+  const base = await (await root.getDirectoryHandle(BASE_DIRECTORY, { create })).getDirectoryHandle(PROJECTS_DIRECTORY, { create });
   return base.getDirectoryHandle(projectId, { create });
 }
 
 export function assertProjectId(projectId: unknown): asserts projectId is string {
-  if (typeof projectId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(projectId)) {
+  if (typeof projectId !== 'string' || !/^[a-z0-9-]{1,64}$/u.test(projectId)) {
     throw new Error(`invalid projectId: ${String(projectId)}`);
   }
 }

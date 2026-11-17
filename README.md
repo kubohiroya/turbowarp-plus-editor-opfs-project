@@ -2,7 +2,7 @@
 
 A library that keeps TurboWarp-Plus-Editor projects in the browser's Origin Private File System (OPFS), with one project per Git repository. It is at an early (experimental) stage.
 
-- `createProjectRepository(root, {projectId, title, author})`: creates a project repository at `turbowarp-plus-projects/<projectId>/` in OPFS and makes the first commit.
+- `createProjectRepository(root, {projectId, title, author})`: creates a project repository at `turbowarp-plus/projects/<projectId>/` in OPFS and makes the first commit.
 - `acquireProjectLock(dir, {owner})`: a lock recorded in `.tw-plus-lock.json` in the project directory. A lock whose heartbeat is older than 30 seconds can be taken over.
 - `importSb3Archive(root, {projectId, bytes, author, owner})`: expands an SB3 into a source-format v1 project folder in the working tree, and commits `Import SB3` if anything changed. Refused while another owner holds the lock.
 - `exportSb3Archive(root, {projectId, buildArchive})`: collects the working-tree files and passes them to your `buildArchive` to produce an SB3. Converting source to SB3 is left to the editor side.

@@ -34,7 +34,7 @@ function fakeLocks() {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 test('the mutex name is derived from the project id', () => {
-  assert.equal(projectMutexName('p1'), 'tw-plus-project:p1');
+  assert.equal(projectMutexName('p1'), 'turbowarp-plus-browser-project:p1');
   assert.throws(() => projectMutexName('../etc'));
 });
 
@@ -64,7 +64,7 @@ test('import and export request the project mutex in exclusive mode', async () =
   const { manager, requests } = fakeLocks();
   await importSb3Archive(root, { projectId: 'p1', bytes: await fixture('ball-demo.sb3'), author, owner: 'tab-a', now: 1, locks: manager });
   await exportSb3Archive(root, { projectId: 'p1', buildArchive: (files) => files.size, locks: manager });
-  assert.deepEqual(requests, ['tw-plus-project:p1:exclusive', 'tw-plus-project:p1:exclusive']);
+  assert.deepEqual(requests, ['turbowarp-plus-browser-project:p1:exclusive', 'turbowarp-plus-browser-project:p1:exclusive']);
 });
 
 test('a heartbeat refreshes the lock until it is stopped', async () => {
