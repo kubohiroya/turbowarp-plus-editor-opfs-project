@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-plus-editor-opfs-project",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "OPFS-backed project folders for TurboWarp-Plus-Editor: one project, one Git repository.",
   "type": "module",
   "license": "MPL-2.0",
@@ -34,13 +34,16 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "src"
+    "src",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test test/*.test.ts",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@kubohiroya/sb3-toolchain": "^0.28.0",
@@ -50,5 +53,9 @@
     "@types/node": "^26.6.6",
     "fflate": "^0.8.3",
     "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
