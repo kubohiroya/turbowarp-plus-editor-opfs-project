@@ -18,7 +18,7 @@ test('creates a project repository in OPFS with one initial commit on main', asy
   assert.equal(log[0].oid, commit);
   assert.equal(log[0].commit.author.name, 'Hiroya Kubo');
   const files = await git.listFiles({ fs, dir: '/' });
-  assert.deepEqual(files, [PROJECT_FILE]);
+  assert.deepEqual(files.sort(), ['.gitignore', PROJECT_FILE]);
   const json = JSON.parse(await fs.promises.readFile(`/${PROJECT_FILE}`, 'utf8'));
   assert.equal(json.meta.title, 'テスト作品');
 });

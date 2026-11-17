@@ -1,5 +1,6 @@
 // テスト用の OPFS 風ディレクトリ。FileSystemDirectoryHandle と同じメソッドだけを持つ。
-class FakeFile {
+export class FakeFile {
+  kind = 'file';
   constructor(entry) { this.entry = entry; }
   async getFile() { return new Blob([this.entry.bytes]); }
   async createWritable() {
@@ -19,6 +20,7 @@ class FakeFile {
 }
 
 export class FakeDirectory {
+  kind = 'directory';
   constructor(name = '') { this.name = name; this.children = new Map(); }
   async getDirectoryHandle(name, { create = false } = {}) {
     const existing = this.children.get(name);
