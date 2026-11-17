@@ -113,3 +113,17 @@ export async function inspectProjectLock(
   if (!existing) return { locked: false };
   return { locked: now - existing.heartbeatAt < staleMs, owner: existing.owner, heartbeatAt: existing.heartbeatAt };
 }
+
+export interface LockHeartbeatOptions {
+  // 既定は staleMs の三分の一（既定 10 秒）ごとに refresh する。
+  intervalMs?: number | undefined;
+  onError?: ((error: unknown) => void) | undefined;
+}
+
+// 長い処理の間、ロックの heartbeat を定期的に更新する。戻り値の関数で止める。
+export function startLockHeartbeat(lock: ProjectLock, { intervalMs = DEFAULT_STALE_MS / 3, onError }: LockHeartbeatOptions = {}): () => void {
+  const timer = setInterval(() => {
+    lock.refresh().catch((error: unknown) => onError?.(error));
+  }, intervalMs);
+  return () => clearInterval(timer);
+}
