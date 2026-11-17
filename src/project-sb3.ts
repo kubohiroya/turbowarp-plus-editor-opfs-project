@@ -6,6 +6,8 @@ import { assertProjectId, commitChanges, GITIGNORE_FILE, openProjectDirectory } 
 import type { Author } from './project-repository.ts';
 import { isDirectoryHandle, isFileHandle } from './opfs-types.ts';
 import { createHistoryBundle, HISTORY_BUNDLE_PATH } from './project-history.ts';
+import { withProjectMutex } from './project-mutex.ts';
+import type { WithProjectMutexOptions } from './project-mutex.ts';
 import type { HistoryBundleRef } from './project-history.ts';
 import type { DirectoryHandle } from './opfs-types.ts';
 
@@ -33,7 +35,7 @@ export interface ImportSb3ArchiveResult {
 /** 作業ツリーのファイル（パス → 中身）から SB3 のバイト列を作る関数。 */
 export type BuildArchive<T = Uint8Array> = (files: Map<string, Uint8Array>) => T | Promise<T>;
 
-export interface ExportSb3ArchiveOptions<T> {
+export interface ExportSb3ArchiveOptions<T> extends WithProjectMutexOptions {
   projectId: string;
   buildArchive: BuildArchive<T>;
 }
@@ -62,36 +64,41 @@ async function readWorkingTree(dir: DirectoryHandle, prefix = '', out = new Map<
 // 作品はロックを取ってから書く。別の owner が有効なロックを持つ間は ProjectLockedError。
 export async function importSb3Archive(
   root: DirectoryHandle,
-  { projectId, bytes, author, owner, now, staleMs }: ImportSb3ArchiveOptions,
+  { projectId, bytes, author, owner, now, staleMs, locks }: ImportSb3ArchiveOptions & WithProjectMutexOptions,
 ): Promise<ImportSb3ArchiveResult> {
   assertProjectId(projectId);
-  const dir = await openProjectDirectory(root, projectId);
-  const fs = createGitFs(dir);
-  const lock = await acquireProjectLock(dir, { owner, now, staleMs });
-  try {
-    const { files, warnings } = unpackSb3(bytes);
-    await removeWorkingTree(dir);
-    for (const [path, contents] of files) {
-      await fs.promises.writeFile(`/${path}`, contents);
+  return withProjectMutex(projectId, async () => {
+    const dir = await openProjectDirectory(root, projectId);
+    const fs = createGitFs(dir);
+    const lock = await acquireProjectLock(dir, { owner, now, staleMs });
+    try {
+      const { files, warnings } = unpackSb3(bytes);
+      await removeWorkingTree(dir);
+      for (const [path, contents] of files) {
+        await fs.promises.writeFile(`/${path}`, contents);
+      }
+      const commit = await commitChanges(fs, '/', 'Import SB3', author);
+      return { commit, changed: commit !== null, warnings, files: [...files.keys()].sort() };
+    } finally {
+      await lock.release();
     }
-    const commit = await commitChanges(fs, '/', 'Import SB3', author);
-    return { commit, changed: commit !== null, warnings, files: [...files.keys()].sort() };
-  } finally {
-    await lock.release();
-  }
+  }, { locks });
 }
 
 // 作業ツリーから作品の内容を集め、呼び出し側が渡す buildArchive で SB3 のバイト列にする。
 // SB3 への変換（source → project.json）は編集側の処理に任せる。ここではファイルの集めと受け渡しだけを行う。
-export async function exportSb3Archive<T>(root: DirectoryHandle, { projectId, buildArchive }: ExportSb3ArchiveOptions<T>): Promise<T> {
+export async function exportSb3Archive<T>(root: DirectoryHandle, { projectId, buildArchive, locks }: ExportSb3ArchiveOptions<T>): Promise<T> {
   assertProjectId(projectId);
   if (typeof buildArchive !== 'function') throw new Error('buildArchive is required');
-  const dir = await openProjectDirectory(root, projectId);
-  const files = await readWorkingTree(dir);
+  // 読み出しも同じ排他の下で行い、書き込み途中の内容を集めないようにする。
+  const files = await withProjectMutex(projectId, async () => {
+    const dir = await openProjectDirectory(root, projectId);
+    return readWorkingTree(dir);
+  }, { locks });
   return buildArchive(files);
 }
 
-export interface ExportSb3WithHistoryOptions<T> {
+export interface ExportSb3WithHistoryOptions<T> extends WithProjectMutexOptions {
   projectId: string;
   buildArchive: BuildArchive<T>;
   author: Author;
@@ -114,30 +121,33 @@ export interface ExportSb3WithHistoryResult<T> {
 // includeUncommitted のときは、ロックを取ってから未コミットの変更を記録する。
 export async function exportSb3WithHistory<T>(
   root: DirectoryHandle,
-  { projectId, buildArchive, author, owner, includeUncommitted, now, staleMs }: ExportSb3WithHistoryOptions<T>,
+  { projectId, buildArchive, author, owner, includeUncommitted, now, staleMs, locks }: ExportSb3WithHistoryOptions<T>,
 ): Promise<ExportSb3WithHistoryResult<T>> {
   assertProjectId(projectId);
   if (typeof buildArchive !== 'function') throw new Error('buildArchive is required');
-  const dir = await openProjectDirectory(root, projectId);
-  const fs = createGitFs(dir);
-  let commit: string | null = null;
-  if (includeUncommitted) {
-    const lock = await acquireProjectLock(dir, { owner, now, staleMs });
-    try {
-      commit = await commitChanges(fs, '/', 'Save before export', author);
-    } finally {
-      await lock.release();
+  const collected = await withProjectMutex(projectId, async () => {
+    const dir = await openProjectDirectory(root, projectId);
+    const fs = createGitFs(dir);
+    let commit: string | null = null;
+    if (includeUncommitted) {
+      const lock = await acquireProjectLock(dir, { owner, now, staleMs });
+      try {
+        commit = await commitChanges(fs, '/', 'Save before export', author);
+      } finally {
+        await lock.release();
+      }
     }
-  }
-  const bundle = await createHistoryBundle(fs, '/');
-  const files = await readWorkingTree(dir);
-  files.set(HISTORY_BUNDLE_PATH, bundle.bytes);
-  const archive = await buildArchive(files);
+    const bundle = await createHistoryBundle(fs, '/');
+    const files = await readWorkingTree(dir);
+    files.set(HISTORY_BUNDLE_PATH, bundle.bytes);
+    return { files, commit, bundle };
+  }, { locks });
+  const archive = await buildArchive(collected.files);
   return {
     archive,
-    commit,
-    bundleRefs: bundle.refs,
-    commitCount: bundle.commitCount,
-    bundleBytes: bundle.bytes.length,
+    commit: collected.commit,
+    bundleRefs: collected.bundle.refs,
+    commitCount: collected.bundle.commitCount,
+    bundleBytes: collected.bundle.bytes.length,
   };
 }

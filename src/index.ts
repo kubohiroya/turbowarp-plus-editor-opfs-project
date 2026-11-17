@@ -5,3 +5,4 @@ export * from './project-lock.ts';
 export * from './project-repository.ts';
 export * from './project-sb3.ts';
 export * from './project-history.ts';
+export * from './project-mutex.ts';
