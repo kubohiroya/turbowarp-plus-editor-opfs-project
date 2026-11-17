@@ -1,33 +1,28 @@
 # turbowarp-plus-editor-opfs-project
 
-TurboWarp-Plus-Editor の作品を、ブラウザーの OPFS 上に「1作品1リポジトリ」として置くための
-ライブラリです。現在は試作段階です。TypeScript で書かれており、`npm run build` で `dist/` に JS と型定義を出力します。
+A library that keeps TurboWarp-Plus-Editor projects in the browser's Origin Private File System (OPFS), with one project per Git repository. It is at an early (experimental) stage.
 
-関数が受け取るディレクトリは、ブラウザーの `FileSystemDirectoryHandle` をそのまま渡せます（型は `src/opfs-types.ts` の最小限の `DirectoryHandle`）。
+- `createProjectRepository(root, {projectId, title, author})`: creates a project repository at `turbowarp-plus-projects/<projectId>/` in OPFS and makes the first commit.
+- `acquireProjectLock(dir, {owner})`: a lock recorded in `.tw-plus-lock.json` in the project directory. A lock whose heartbeat is older than 30 seconds can be taken over.
+- `importSb3Archive(root, {projectId, bytes, author, owner})`: expands an SB3 into a source-format v1 project folder in the working tree, and commits `Import SB3` if anything changed. Refused while another owner holds the lock.
+- `exportSb3Archive(root, {projectId, buildArchive})`: collects the working-tree files and passes them to your `buildArchive` to produce an SB3. Converting source to SB3 is left to the editor side.
+- `src/opfs-git-fs.js`: an adapter that uses an OPFS directory as the `fs` for isomorphic-git (symbolic links are not supported).
 
-- `createProjectRepository(root, {projectId, title, author})`：OPFS の `turbowarp-plus-projects/<projectId>/` に作品リポジトリを作り、初回コミットを作る。
-- `acquireProjectLock(dir, {owner})`：作品ディレクトリ直下の `.tw-plus-lock.json` によるロック。heartbeat が 30 秒より古ければ取り直せる。
-- `importSb3Archive(root, {projectId, bytes, author, owner})`：SB3 を形式 v1 の作品フォルダに展開して作業ツリーへ入れ、変更があれば `Import SB3` をコミットする。ロック中は拒否。
-- `exportSb3Archive(root, {projectId, buildArchive})`：作業ツリーのファイルを集め、呼び出し側の `buildArchive` で SB3 にする。SB3 への変換は編集側の処理に任せる。
-- `createGitFs(dir)`（`src/opfs-git-fs.ts`）：OPFS のディレクトリを isomorphic-git の fs として使うアダプター（シンボリックリンク非対応）。
+The design is in `docs/opfs-project-storage.ja.md` in turbowarp-plus-packages (in Japanese).
 
-設計は turbowarp-plus-packages の `docs/opfs-project-storage.ja.md` を参照してください。
+Not yet implemented: GitHub push and pull, and the editor settings. The editor must also wrap lock acquisition in Web Locks.
 
-未実装: GitHub の push と pull、Editor 側の設定と Web Locks による取得の囲み。
+日本語版: [README.ja.md](README.ja.md)
 
-## テスト
+## Test
 
 ```sh
 npm install
-npm run typecheck
 npm test
-npm run build
 ```
 
-テストは Node の型除去機能で `.ts` を直接実行します（Node 22.18 以上）。
+Tests use a fake directory implementation instead of OPFS. SB3 import and export are checked with the real SB3 files in `test/fixtures`. Verification in a real Chromium OPFS is still needed.
 
-テストは OPFS の代わりにフェイクのディレクトリ実装を使います。SB3 の入出力は `test/fixtures` の実際の SB3 で確かめています。実際の Chromium の OPFS での確認は別途必要です。
+## License
 
-## ライセンス
-
-MPL-2.0（`LICENSE`）。
+MPL-2.0 (see `LICENSE`).
