@@ -17,6 +17,11 @@ English: [README.md](README.md)TypeScript で書かれており、`npm run build
 
 未実装: GitHub の push と pull、Editor 側の設定と Web Locks による取得の囲み。
 
+
+## 0.3系からの更新
+
+0.4.0は保存先・排他名・許可IDを変更します。自動移行は行いません。既存データがある利用側は0.3系を維持し、[保存契約と移行の受け入れ基準](docs/storage-contract-0.4.ja.md)を確認してから明示的に更新してください。
+
 ## テスト
 
 ```sh
