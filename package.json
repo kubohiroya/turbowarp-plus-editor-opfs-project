@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-plus-editor-opfs-project",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "OPFS-backed project folders for TurboWarp-Plus-Editor: one project, one Git repository.",
   "type": "module",
   "license": "MPL-2.0",
@@ -36,7 +36,9 @@
     "dist",
     "src",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.ja.md",
+    "docs/storage-contract-0.4.ja.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -46,7 +48,7 @@
     "prepublishOnly": "npm run typecheck && npm test"
   },
   "dependencies": {
-    "@kubohiroya/sb3-toolchain": "^0.28.0",
+    "@kubohiroya/sb3-toolchain": "^0.28.1",
     "isomorphic-git": "^1.44.15"
   },
   "devDependencies": {

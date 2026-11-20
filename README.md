@@ -14,6 +14,11 @@ Not yet implemented: GitHub push and pull, and the editor settings. The editor m
 
 日本語版: [README.ja.md](README.ja.md)
 
+
+## Upgrading from 0.3
+
+Version 0.4.0 changes the storage directory, Web Locks name and accepted project IDs. It does not migrate existing data. Keep existing-data consumers on 0.3 until their migration is verified; see the [storage contract and migration acceptance criteria](docs/storage-contract-0.4.ja.md) (Japanese).
+
 ## Test
 
 ```sh
