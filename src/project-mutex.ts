@@ -10,7 +10,8 @@ export interface LockManagerLike {
 
 export function projectMutexName(projectId: string): string {
   assertProjectId(projectId);
-  return `tw-plus-project:${projectId}`;
+  // project-folder の browser-projects が使う名前と同じにして、同じ作品の排他が両方で効くようにする。
+  return `turbowarp-plus-browser-project:${projectId}`;
 }
 
 function defaultLockManager(): LockManagerLike | undefined {

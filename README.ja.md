@@ -7,7 +7,7 @@ English: [README.md](README.md)TypeScript で書かれており、`npm run build
 
 関数が受け取るディレクトリは、ブラウザーの `FileSystemDirectoryHandle` をそのまま渡せます（型は `src/opfs-types.ts` の最小限の `DirectoryHandle`）。
 
-- `createProjectRepository(root, {projectId, title, author})`：OPFS の `turbowarp-plus-projects/<projectId>/` に作品リポジトリを作り、初回コミットを作る。
+- `createProjectRepository(root, {projectId, title, author})`：OPFS の `turbowarp-plus/projects/<projectId>/` に作品リポジトリを作り、初回コミットを作る。
 - `acquireProjectLock(dir, {owner})`：作品ディレクトリ直下の `.tw-plus-lock.json` によるロック。heartbeat が 30 秒より古ければ取り直せる。
 - `importSb3Archive(root, {projectId, bytes, author, owner})`：SB3 を形式 v1 の作品フォルダに展開して作業ツリーへ入れ、変更があれば `Import SB3` をコミットする。ロック中は拒否。
 - `exportSb3Archive(root, {projectId, buildArchive})`：作業ツリーのファイルを集め、呼び出し側の `buildArchive` で SB3 にする。SB3 への変換は編集側の処理に任せる。
