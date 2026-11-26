@@ -4,26 +4,81 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published release tag whose dist-tags should be synchronized
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
       - run: npm install --global npm@11.21.0
       - run: npm ci
       - run: npm test
       - name: Require the tag to match package.json
-        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+        run: test "v$(node -p "require('./package.json').version")" = "$RELEASE_TAG"
       - name: Publish with npm trusted publishing (OIDC, provenance)
+        if: github.event_name == 'push'
         run: npm publish --access public --provenance
+      - name: Verify the existing publication before a manual synchronization
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          export SOURCE_REVISION="$(git rev-parse HEAD)"
+          npm view "$name@$version" --json --prefer-online > "$RUNNER_TEMP/published-package.json"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          import {readFile} from 'node:fs/promises';
+          const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+          const metadata = JSON.parse(await readFile(process.env.RUNNER_TEMP + '/published-package.json', 'utf8'));
+          assert.equal(metadata.name, pkg.name);
+          assert.equal(metadata.version, pkg.version);
+          assert.equal(metadata.gitHead, process.env.SOURCE_REVISION);
+          assert.equal(metadata.dist.attestations?.provenance?.predicateType, 'https://slsa.dev/provenance/v1');
+          const response = await fetch(metadata.dist.tarball, {signal: AbortSignal.timeout(30000)});
+          assert.ok(response.ok);
+          const archive = Buffer.from(await response.arrayBuffer());
+          assert.equal(createHash('sha1').update(archive).digest('hex'), metadata.dist.shasum);
+          assert.equal('sha512-' + createHash('sha512').update(archive).digest('base64'), metadata.dist.integrity);
+          console.log('Verified the existing publication source and archive integrity; no package will be republished.');
+          NODE
+      - name: Point latest and next at this release
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          latest="$(npm view "$name" dist-tags.latest --prefer-online)"
+          test "$latest" = "$version"
+          next="$(npm view "$name" dist-tags.next --prefer-online)"
+          if [ -n "$next" ]; then
+            npm exec --yes --package=semver@7.8.6 -- semver "$next" --range "<=$version" > /dev/null
+          fi
+          for tag in latest next; do
+            if [ "$(npm view "$name" "dist-tags.$tag" --prefer-online)" != "$version" ]; then
+              npm dist-tag add "$name@$version" "$tag"
+            fi
+          done
